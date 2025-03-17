@@ -1,10 +1,16 @@
-import type { Express, Request, Response } from "express";
+import type { Express, Request, Response, NextFunction } from "express";
 import { createServer, type Server } from "http";
 import { setupAuth } from "./auth";
 import { storage } from "./storage";
-import { insertCategorySchema, insertProductSchema, insertCartItemSchema } from "@shared/schema";
+import { insertCategorySchema, insertProductSchema, insertCartItemSchema, type User } from "@shared/schema";
 import Stripe from "stripe";
-import { Router } from "express";
+
+// Extend Express Request type to include user
+declare module 'express-serve-static-core' {
+  interface Request {
+    user?: User;
+  }
+}
 
 // Initialize Stripe
 const stripeSecretKey = process.env.STRIPE_SECRET_KEY || "sk_test_dummy";
@@ -12,17 +18,30 @@ const stripe = new Stripe(stripeSecretKey, {
   apiVersion: "2025-02-24.acacia", // Updated to latest version
 });
 
-// Middleware to check admin status
-function isAdmin(req: Request, res: Response, next: Function) {
-  if (req.isAuthenticated() && req.user.isAdmin) {
-    return next();
+// Type guard function to assert user is authenticated
+function assertAuthenticated(req: Request): asserts req is Request & { user: User } {
+  if (!req.user) {
+    throw new Error('User is not authenticated');
   }
-  return res.status(403).send("Unauthorized: Admin access required");
+}
+
+// Middleware to check admin status
+function isAdmin(req: Request, res: Response, next: NextFunction) {
+  try {
+    assertAuthenticated(req);
+    if (req.user.isAdmin) {
+      return next();
+    }
+    return res.status(403).send("Unauthorized: Admin access required");
+  } catch {
+    return res.status(401).send("Unauthorized");
+  }
 }
 
 // Middleware to check authentication
-function isAuthenticated(req: Request, res: Response, next: Function) {
+function isAuthenticated(req: Request, res: Response, next: NextFunction) {
   if (req.isAuthenticated()) {
+    assertAuthenticated(req);
     return next();
   }
   return res.status(401).send("Unauthorized: Please login");
@@ -160,6 +179,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Cart routes
   app.get("/api/cart", isAuthenticated, async (req, res) => {
     try {
+      assertAuthenticated(req);
       const cartItems = await storage.getCartItems(req.user.id);
       res.json(cartItems);
     } catch (error) {
@@ -169,6 +189,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/cart", isAuthenticated, async (req, res) => {
     try {
+      assertAuthenticated(req);
       const validData = insertCartItemSchema.parse({
         ...req.body,
         userId: req.user.id
@@ -187,6 +208,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.put("/api/cart/:productId", isAuthenticated, async (req, res) => {
     try {
+      assertAuthenticated(req);
       const productId = parseInt(req.params.productId);
       const { quantity } = req.body;
       
@@ -207,6 +229,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.delete("/api/cart/:productId", isAuthenticated, async (req, res) => {
     try {
+      assertAuthenticated(req);
       const productId = parseInt(req.params.productId);
       const success = await storage.removeFromCart(req.user.id, productId);
       
@@ -223,6 +246,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Order routes
   app.get("/api/orders", isAuthenticated, async (req, res) => {
     try {
+      assertAuthenticated(req);
       let orders;
       if (req.user.isAdmin) {
         orders = await storage.getAllOrders();
@@ -237,6 +261,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get("/api/orders/:id", isAuthenticated, async (req, res) => {
     try {
+      assertAuthenticated(req);
       const id = parseInt(req.params.id);
       const order = await storage.getOrderById(id);
       
@@ -279,6 +304,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Stripe payment route
   app.post("/api/create-payment-intent", isAuthenticated, async (req, res) => {
     try {
+      assertAuthenticated(req);
       const { amount } = req.body;
       
       if (!amount || typeof amount !== 'number' || amount <= 0) {
@@ -306,6 +332,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Create order after successful payment
   app.post("/api/orders", isAuthenticated, async (req, res) => {
     try {
+      assertAuthenticated(req);
       const { total, items } = req.body;
       
       if (!total || typeof total !== 'number' || total <= 0 || !items || !Array.isArray(items)) {
