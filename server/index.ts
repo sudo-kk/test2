@@ -54,6 +54,8 @@ app.use((req, res, next) => {
     const message = err.message || "Internal Server Error";
 
     res.status(status).json({ message });
+throw err;
+    throw err;
   });
 
   if (app.get("env") === "development") {
