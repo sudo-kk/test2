@@ -26,7 +26,7 @@ export async function setupVite(app: Express, server: Server) {
   const serverOptions = {
     middlewareMode: true,
     hmr: { server },
-    allowedHosts: true,
+    allowedHosts: true as true,
   };
 
   const vite = await createViteServer({
@@ -71,7 +71,10 @@ export async function setupVite(app: Express, server: Server) {
 }
 
 export function serveStatic(app: Express) {
-  const distPath = path.resolve(__dirname, "..", "dist", "public");
+  // In production, Railway will place files in /app/public
+  const distPath = process.env.NODE_ENV === 'production' 
+    ? path.resolve('/app/public')
+    : path.resolve(__dirname, "..", "dist", "public");
 
   if (!fs.existsSync(distPath)) {
     throw new Error(
