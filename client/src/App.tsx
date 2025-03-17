@@ -15,6 +15,7 @@ import AdminDashboard from "@/pages/admin/dashboard";
 import AdminProducts from "@/pages/admin/products";
 import AdminOrders from "@/pages/admin/orders";
 import { CartProvider } from "./context/cart-context";
+import { CurrencyProvider } from "./context/currency-context";
 import Navbar from "./components/layout/navbar-new";
 import Footer from "./components/layout/footer";
 
@@ -40,14 +41,16 @@ function App() {
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
         <CartProvider>
-          <div className="flex flex-col min-h-screen">
-            <Navbar />
-            <main className="flex-grow">
-              <Router />
-            </main>
-            <Footer />
-          </div>
-          <Toaster />
+          <CurrencyProvider>
+            <div className="flex min-h-screen flex-col">
+              <Navbar />
+              <main className="flex-1">
+                <Router />
+              </main>
+              <Footer />
+            </div>
+            <Toaster />
+          </CurrencyProvider>
         </CartProvider>
       </AuthProvider>
     </QueryClientProvider>

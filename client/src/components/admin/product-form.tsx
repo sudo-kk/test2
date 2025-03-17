@@ -12,8 +12,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Loader2 } from "lucide-react";
+import { Loader2, Image as ImageIcon } from "lucide-react";
 import { Product, Category } from "@shared/schema";
+import { useState, useEffect } from "react";
 
 interface ProductFormProps {
   product?: Product | null;
@@ -46,6 +47,8 @@ const productSchema = z.object({
 });
 
 export default function ProductForm({ product, categories, onSubmit, isLoading }: ProductFormProps) {
+  const [imagePreview, setImagePreview] = useState<string | null>(product?.imageUrl || null);
+  
   const form = useForm<z.infer<typeof productSchema>>({
     resolver: zodResolver(productSchema),
     defaultValues: product ? {
@@ -69,11 +72,20 @@ export default function ProductForm({ product, categories, onSubmit, isLoading }
     },
   });
 
+  // Watch for changes to the imageUrl field to update preview
+  const imageUrl = form.watch("imageUrl");
+  
+  useEffect(() => {
+    if (imageUrl) {
+      setImagePreview(imageUrl);
+    }
+  }, [imageUrl]);
+  
   function handleSubmit(values: z.infer<typeof productSchema>) {
     // If editing, include the product ID
     onSubmit(product ? { id: product.id, ...values } : values);
   }
-
+  
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6">
@@ -125,7 +137,7 @@ export default function ProductForm({ product, categories, onSubmit, isLoading }
             name="price"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Price ($)</FormLabel>
+                <FormLabel>Price (₹)</FormLabel>
                 <FormControl>
                   <Input type="number" step="0.01" min="0" {...field} />
                 </FormControl>
@@ -204,26 +216,46 @@ export default function ProductForm({ product, categories, onSubmit, isLoading }
             <FormItem>
               <FormLabel>Image URL</FormLabel>
               <FormControl>
-                <Input placeholder="https://example.com/image.jpg" {...field} />
+                <div className="flex space-x-2">
+                  <Input placeholder="https://example.com/image.jpg" {...field} />
+                  <Button 
+                    type="button" 
+                    variant="outline"
+                    onClick={() => {
+                      if (field.value) setImagePreview(field.value);
+                    }}
+                  >
+                    <ImageIcon className="h-4 w-4 mr-2" />
+                    Preview
+                  </Button>
+                </div>
               </FormControl>
               <FormMessage />
+              {imagePreview && (
+                <div className="mt-2">
+                  <p className="text-sm text-gray-500 mb-2">Image Preview:</p>
+                  <div className="relative w-full max-w-sm h-48 border rounded-md overflow-hidden bg-gray-50">
+                    <img 
+                      src={imagePreview} 
+                      alt="Product preview" 
+                      className="w-full h-full object-contain" 
+                      onError={(e) => {
+                        (e.target as HTMLImageElement).src = "https://placehold.co/400x300?text=Invalid+Image+URL";
+                        form.setError("imageUrl", { 
+                          type: "manual", 
+                          message: "Unable to load image from this URL. Please check the URL and try again." 
+                        });
+                      }}
+                      onLoad={() => {
+                        form.clearErrors("imageUrl");
+                      }}
+                    />
+                  </div>
+                </div>
+              )}
             </FormItem>
           )}
         />
-
-        {field.value && (
-          <div className="mt-2">
-            <p className="text-sm text-gray-500 mb-2">Image Preview:</p>
-            <img 
-              src={field.value} 
-              alt="Product preview" 
-              className="w-full max-w-sm h-auto object-cover rounded-md border" 
-              onError={(e) => {
-                (e.target as HTMLImageElement).src = "https://placehold.co/400x300?text=Invalid+Image+URL";
-              }}
-            />
-          </div>
-        )}
 
         <div className="flex justify-end space-x-2">
           <Button type="button" variant="outline" onClick={() => form.reset()}>

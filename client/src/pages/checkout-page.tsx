@@ -9,6 +9,7 @@ import { Separator } from "@/components/ui/separator";
 import { useCart } from "@/context/cart-context";
 import { Loader2, CheckCircle2, AlertCircle } from "lucide-react";
 import { useLocation } from "wouter";
+import { useCurrency } from '@/context/currency-context';
 
 // Make sure to call `loadStripe` outside of a component's render to avoid
 // recreating the `Stripe` object on every render
@@ -96,7 +97,7 @@ function CheckoutForm({ totalAmount }: { totalAmount: number }) {
             Processing...
           </>
         ) : (
-          `Pay $${totalAmount.toFixed(2)}`
+          `Pay ₹${totalAmount.toFixed(2)}`
         )}
       </Button>
     </form>
@@ -108,6 +109,7 @@ export default function CheckoutPage() {
   const { cartItems, cartTotal } = useCart();
   const { toast } = useToast();
   const [paymentStatus, setPaymentStatus] = useState<'loading' | 'ready' | 'success' | 'error'>('loading');
+  const { formatPrice } = useCurrency();
   
   // Calculate total including shipping and tax
   const shippingCost = cartTotal >= 100 ? 0 : 10;
@@ -236,7 +238,7 @@ export default function CheckoutPage() {
                             </div>
                           </div>
                           <p className="text-sm font-medium text-gray-900">
-                            ${(item.product.price * item.quantity).toFixed(2)}
+                            {formatPrice(item.product.price * item.quantity)}
                           </p>
                         </div>
                       ))}
@@ -247,22 +249,22 @@ export default function CheckoutPage() {
                     <div className="space-y-2">
                       <div className="flex justify-between text-sm">
                         <p className="text-gray-500">Subtotal</p>
-                        <p className="font-medium">${cartTotal.toFixed(2)}</p>
+                        <p className="font-medium">{formatPrice(cartTotal)}</p>
                       </div>
                       <div className="flex justify-between text-sm">
                         <p className="text-gray-500">Shipping</p>
                         <p className="font-medium">
-                          {shippingCost > 0 ? `$${shippingCost.toFixed(2)}` : 'Free'}
+                          {shippingCost > 0 ? formatPrice(shippingCost) : 'Free'}
                         </p>
                       </div>
                       <div className="flex justify-between text-sm">
                         <p className="text-gray-500">Tax</p>
-                        <p className="font-medium">${tax.toFixed(2)}</p>
+                        <p className="font-medium">{formatPrice(tax)}</p>
                       </div>
                       <Separator className="my-2" />
                       <div className="flex justify-between">
                         <p className="font-medium text-gray-900">Total</p>
-                        <p className="font-bold text-gray-900">${totalAmount.toFixed(2)}</p>
+                        <p className="font-bold text-gray-900">{formatPrice(totalAmount)}</p>
                       </div>
                     </div>
                   </CardContent>

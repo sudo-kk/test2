@@ -23,6 +23,7 @@ import {
   DialogTrigger
 } from "@/components/ui/dialog";
 import { Loader2, Edit, Trash, Plus } from "lucide-react";
+import { formatRupees } from "@/lib/currency";
 
 export default function AdminProducts() {
   const { toast } = useToast();
@@ -179,7 +180,7 @@ export default function AdminProducts() {
                                     </div>
                                   </TableCell>
                                   <TableCell className="font-medium">{product.name}</TableCell>
-                                  <TableCell>${product.price.toFixed(2)}</TableCell>
+                                  <TableCell>₹{product.price.toFixed(2)}</TableCell>
                                   <TableCell>{category?.name || 'Unknown'}</TableCell>
                                   <TableCell>
                                     <span 
