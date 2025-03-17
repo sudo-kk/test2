@@ -4,6 +4,7 @@ import { setupAuth } from "./auth";
 import { storage } from "./storage";
 import { insertCategorySchema, insertProductSchema, insertCartItemSchema } from "@shared/schema";
 import Stripe from "stripe";
+import { Router } from "express";
 
 // Initialize Stripe
 const stripeSecretKey = process.env.STRIPE_SECRET_KEY || "sk_test_dummy";
@@ -30,6 +31,11 @@ function isAuthenticated(req: Request, res: Response, next: Function) {
 export async function registerRoutes(app: Express): Promise<Server> {
   // Sets up /api/register, /api/login, /api/logout, /api/user
   setupAuth(app);
+
+  // Add health check endpoint
+  app.get('/api/health', (req, res) => {
+    res.status(200).json({ status: 'healthy' });
+  });
 
   // Get all products
   app.get("/api/products", async (req, res) => {
